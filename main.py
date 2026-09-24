@@ -19,10 +19,27 @@ client = genai.Client(api_key=GEMINI_API_KEY)
 def generate_content():
     print("Generating a trending Hindi thought using Gemini...")
     prompt = "Write ONE deep, trending, and beautiful short Hindi thought/quote (max 10 words). Only return the Hindi text, nothing else."
-    response = client.models.generate_content(
-        model='gemini-3.6-flash',
-        contents=prompt
-    )
+    # Try multiple models in order (fallback if one is busy)
+    models_to_try = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-3.6-flash']
+    response = None
+    for model_name in models_to_try:
+        for attempt in range(3):  # Retry 3 times per model
+            try:
+                print(f"Trying model: {model_name} (attempt {attempt+1})...")
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt
+                )
+                print(f"Success with model: {model_name}")
+                break
+            except Exception as e:
+                print(f"Model {model_name} failed: {e}")
+                time.sleep(5)  # Wait 5 sec before retry
+        if response:
+            break
+    if not response:
+        raise Exception("All Gemini models failed. Try again later.")
+
     hindi_thought = response.text.strip().replace('"', '')
     print(f"Today's thought: {hindi_thought}")
     
