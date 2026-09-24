@@ -50,14 +50,17 @@ def generate_thought():
 
 
 def build_image_prompt(thought):
-    # Kept short on purpose: very long prompts make the URL huge and Pollinations fails.
     return (
-        f'Ultra-realistic premium Instagram photograph of an ancient temple wall with the Hindi text '
-        f'"{thought}" physically carved and painted on the stone, looking 100% real, not a digital overlay. '
-        f'Artistic Devanagari typography, warm complementary colors. '
-        f'A Krishna bansuri flute and two peacock feathers placed beautifully in the frame. '
-        f'Small text "PareshPadsala_" visible at the bottom center. '
-        f'Cinematic lighting, sharp details, HDR, editorial photography, vertical composition.'
+        f'A stunning premium Instagram photo in vertical format. '
+        f'A beautiful Indian woman in traditional attire sitting near a colorful temple, '
+        f'holding a Krishna bansuri flute, with 2 vibrant peacock feathers (morpankh) placed elegantly nearby. '
+        f'Warm golden hour lighting, marigold flowers, soft bokeh background. '
+        f'In the center of the image, the Hindi text "{thought}" is written in large, '
+        f'beautiful calligraphy style on a wooden board or stone slab in the scene. '
+        f'At the bottom of the image, small elegant text reads "PareshPadsala_". '
+        f'Ultra-realistic DSLR photography, vibrant colors, cinematic composition, '
+        f'NO Chinese symbols, NO tomb, NO monument, NO Japanese text. '
+        f'Indian temple aesthetic, devotional mood, premium editorial look.'
     )
 
 
