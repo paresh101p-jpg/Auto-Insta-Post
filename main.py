@@ -118,13 +118,21 @@ def main():
         # Step 2 & 3: Extract and generate full caption using Gemini
         caption = generate_caption(image_path)
 
-        # Step 4: Post to Instagram
+        # Step 4: Post to Instagram Feed
         cl = instagram_login()
-        print("Uploading to Instagram...")
+        print("Uploading to Instagram Feed...")
         cl.photo_upload(image_path, caption)
-        print("Successfully Posted! ✅")
+        print("Successfully Posted to Feed! ✅")
 
-        # Step 5: Delete posted image so it never repeats
+        # Step 5: Post to Instagram Story
+        print("Uploading to Instagram Story...")
+        try:
+            cl.photo_upload_to_story(image_path)
+            print("Successfully Posted to Story! ✅")
+        except Exception as e:
+            print(f"Failed to post to story: {e}")
+
+        # Step 6: Delete posted image so it never repeats
         delete_posted_image(image_path)
 
     except Exception as e:
