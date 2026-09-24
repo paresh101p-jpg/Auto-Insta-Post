@@ -126,17 +126,18 @@ def post_ig_media(ig_account_id, caption, image_url, is_story=False):
     pub_payload = {'creation_id': creation_id, 'access_token': FB_ACCESS_TOKEN}
     
     # Wait a few seconds for IG to process the image container
-    time.sleep(5)
+    print("Waiting 15 seconds for Instagram to process the image...")
+    time.sleep(15)
     
-    for attempt in range(3):
+    for attempt in range(6):
         pub_res = requests.post(pub_url, data=pub_payload).json()
         if 'id' in pub_res:
             print(f"✅ IG {target} Success (ID: {pub_res['id']})")
             return
         elif pub_res.get('error', {}).get('code') == 9007:
             # Media not ready, wait and retry
-            print(f"Media not ready, retrying... (Attempt {attempt+1})")
-            time.sleep(5)
+            print(f"Media not ready, retrying... (Attempt {attempt+1}/6)")
+            time.sleep(10)
         else:
             print(f"❌ IG Publish Failed for {target}: {pub_res}")
             return
