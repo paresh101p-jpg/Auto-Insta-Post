@@ -5,7 +5,7 @@ import time
 import base64
 import random
 import requests
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from instagrapi import Client
 from google import genai
 from google.genai import types
@@ -49,25 +49,23 @@ def generate_thought():
     raise Exception("All Gemini attempts failed. Try again later.")
 
 
-def build_image_prompt(thought):
-    # Very specific Indian devotional scene - avoids Chinese/tomb/monument style
+def build_image_prompt():
+    # Background only - NO text in prompt (PIL will add text perfectly)
     return (
-        f'hyperrealistic Instagram photo, beautiful Indian Hindu temple scene, '
-        f'golden hour sunlight, orange marigold flowers everywhere, '
-        f'a wooden signboard in the scene with Hindi text "{thought}" painted on it in saffron color, '
-        f'a Krishna bansuri flute lying on the ground, '
-        f'two colorful peacock feathers (morpankh) placed next to the flute, '
-        f'small text PareshPadsala written at bottom, '
-        f'warm vibrant colors, cinematic photography, bokeh background, '
-        f'NOT a tomb, NOT a monument, NOT Chinese, NOT Japanese, NOT dark, '
-        f'beautiful devotional Indian aesthetic'
+        'hyperrealistic beautiful Indian devotional scene, '
+        'golden hour sunlight, colorful Hindu temple in background, '
+        'orange and yellow marigold flowers, green trees, '
+        'a Krishna bansuri flute and two peacock feathers (morpankh) in foreground, '
+        'warm vibrant saffron colors, cinematic DSLR photography, bokeh, '
+        'NO people, NO text, NO watermark, NO Chinese, NOT a tomb, NOT dark'
     )
 
 
-def generate_image_pollinations(prompt, path, retries=5):
-    """Download from Pollinations AI - free image generation."""
+def generate_image_pollinations(path, retries=5):
+    """Download background from Pollinations AI."""
+    prompt = build_image_prompt()
     base_url = "https://image.pollinations.ai/prompt/"
-    params = f"?width=1080&height=1350&model=flux&nologo=true"
+    params = "?width=1080&height=1350&model=flux&nologo=true"
     for attempt in range(1, retries + 1):
         seed = random.randint(10000, 999999)
         url = base_url + requests.utils.quote(prompt, safe='') + params + f"&seed={seed}"
@@ -79,15 +77,76 @@ def generate_image_pollinations(prompt, path, retries=5):
                 img = Image.open(io.BytesIO(r.content))
                 img.load()
                 img.convert("RGB").save(path, "JPEG", quality=95)
-                print(f"Image saved: {img.size}")
+                print(f"Background saved: {img.size}")
                 return
-            print(f"Bad response: {r.status_code}, {ctype}")
+            print(f"Bad response: {r.status_code}")
         except Exception as e:
             print(f"Attempt {attempt} failed: {e}")
         time.sleep(8 * attempt)
     raise Exception("Image generation failed after all attempts.")
 
 
+def add_text_overlay(image_path, thought, output_path):
+    """Add Hindi thought text and PareshPadsala_ branding on the image using PIL."""
+    print("Adding text overlay on image...")
+    img = Image.open(image_path).convert("RGBA")
+    W, H = img.size
+
+    # Download Hindi font (Noto Sans Devanagari) if not present
+    font_path = "NotoSansDevanagari.ttf"
+    if not os.path.exists(font_path):
+        font_url = "https://github.com/googlefonts/noto-fonts/raw/main/hinted/ttf/NotoSansDevanagari/NotoSansDevanagari-Bold.ttf"
+        print("Downloading Hindi font...")
+        r = requests.get(font_url, timeout=30)
+        with open(font_path, "wb") as f:
+            f.write(r.content)
+
+    # ---- Dark semi-transparent banner in center ----
+    overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+
+    banner_h = int(H * 0.28)
+    banner_y = int(H * 0.36)
+    draw.rectangle([(0, banner_y), (W, banner_y + banner_h)], fill=(0, 0, 0, 160))
+
+    # ---- Hindi Thought Text ----
+    font_size = 68
+    try:
+        font = ImageFont.truetype(font_path, font_size)
+        small_font = ImageFont.truetype(font_path, 36)
+    except:
+        font = ImageFont.load_default()
+        small_font = font
+
+    # Word wrap
+    words = thought.split()
+    lines, line = [], ""
+    for word in words:
+        test = line + word + " "
+        if draw.textlength(test, font=font) < W - 80:
+            line = test
+        else:
+            lines.append(line.strip())
+            line = word + " "
+    lines.append(line.strip())
+
+    # Draw each line centered
+    total_text_h = len(lines) * (font_size + 10)
+    text_y = banner_y + (banner_h - total_text_h) // 2
+    for line in lines:
+        tw = draw.textlength(line, font=font)
+        draw.text(((W - tw) // 2, text_y), line, font=font, fill=(255, 220, 100, 255))
+        text_y += font_size + 10
+
+    # ---- PareshPadsala_ at bottom ----
+    brand = "@PareshPadsala_"
+    bw = draw.textlength(brand, font=small_font)
+    draw.text(((W - bw) // 2, H - 70), brand, font=small_font, fill=(255, 255, 255, 220))
+
+    # Merge and save
+    combined = Image.alpha_composite(img, overlay)
+    combined.convert("RGB").save(output_path, "JPEG", quality=95)
+    print("Text overlay added successfully!")
 
 def instagram_login():
     print("Logging into Instagram via session...")
@@ -102,7 +161,9 @@ def instagram_login():
 def main():
     try:
         thought = generate_thought()
-        generate_image_pollinations(build_image_prompt(thought), IMAGE_PATH)
+        raw_path = "background.jpg"
+        generate_image_pollinations(raw_path)  # Step 1: Background
+        add_text_overlay(raw_path, thought, IMAGE_PATH)  # Step 2: Add Hindi text
 
         caption = f"""{thought}
 
