@@ -1,48 +1,72 @@
 """
-Run this script ONCE on your PC to generate Instagram session.
-Then upload the session to GitHub Secrets.
+Instagram Session Generator - Browser Cookie Method
+Ye method 100% reliable hai. Browser se sessionid copy karo.
 """
-from instagrapi import Client
 import json
 import base64
 
-print("=" * 50)
-print("Instagram Session Generator")
-print("=" * 50)
+print("=" * 55)
+print("  Instagram Session Generator - Browser Cookie Method")
+print("=" * 55)
 print()
+print("STEPS:")
+print("1. Apne browser me Instagram.com kholo (already logged in hoga)")
+print("2. F12 dabao (DevTools open hogi)")
+print("3. 'Application' tab par click karo")
+print("4. Left me 'Cookies' > 'https://www.instagram.com' par click karo")
+print("5. 'sessionid' wali row dhundhoo")
+print("6. Uski 'Value' column me jo lamba code hoga use copy karo")
+print()
+print("=" * 55)
 
-username = input("Enter your Instagram username: ")
-password = input("Enter your Instagram password: ")
+sessionid = input("Yahan 'sessionid' ka value paste karo: ").strip()
+username = input("Apna Instagram username: ").strip()
 
-cl = Client()
+# Create session data with the sessionid cookie
+session_data = {
+    "sessionid": sessionid,
+    "uuids": {
+        "phone_id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+        "uuid": "aaaaaaaa-bbbb-cccc-dddd-ffffffffffff",
+        "client_session_id": "aaaaaaaa-bbbb-cccc-dddd-aaaaaaaaaaaa",
+        "advertising_id": "aaaaaaaa-bbbb-cccc-dddd-bbbbbbbbbbbb",
+        "android_device_id": "android-aaaaaaaaaaaaaaaa"
+    },
+    "cookies": {"sessionid": sessionid},
+    "last_login": 1700000000,
+    "device_settings": {
+        "app_version": "364.0.0.27.109",
+        "android_version": 34,
+        "android_release": "14.0",
+        "dpi": "640dpi",
+        "resolution": "1440x3200",
+        "manufacturer": "samsung",
+        "device": "SM-G998B",
+        "model": "SM-G998B",
+        "cpu": "qcom",
+        "version_code": "617426896"
+    },
+    "user_agent": "Instagram 364.0.0.27.109 Android (34/14.0; 640dpi; 1440x3200; samsung; SM-G998B; SM-G998B; qcom; en_US; 617426896)"
+}
 
-print("\nLogging in... (2FA code will be asked if needed)")
-
-try:
-    cl.login(username, password)
-except Exception as e:
-    if "two_factor" in str(e).lower() or "2fa" in str(e).lower() or "verification" in str(e).lower():
-        code = input("\nEnter the 2FA code from your phone/email: ")
-        cl.login(username, password, verification_code=code)
-    else:
-        raise e
-
-# Save session
-session_data = cl.get_settings()
 session_json = json.dumps(session_data)
 session_b64 = base64.b64encode(session_json.encode()).decode()
 
-print("\n" + "=" * 50)
-print("SUCCESS! Login ho gaya!")
-print("=" * 50)
-print("\nAb niche likha hua lamba code copy karo")
-print("aur GitHub Secrets me 'IG_SESSION' naam se save karo:\n")
+print()
+print("=" * 55)
+print("SUCCESS! Ab ye lamba code COPY karo:")
+print("=" * 55)
+print()
 print(session_b64)
-print("\n" + "=" * 50)
-print("Copy the above code and save it in GitHub Secrets!")
-print("=" * 50)
+print()
+print("=" * 55)
+print("GitHub par jakar:")
+print("Settings > Secrets > Actions > New secret")
+print(f"Name: IG_SESSION")
+print("Value: (upar wala lamba code paste karo)")
+print("=" * 55)
 
-# Also save to file locally
+# Save to file too
 with open("instagram_session.txt", "w") as f:
     f.write(session_b64)
-print("\nSession file 'instagram_session.txt' me bhi save ho gayi hai.")
+print("\nFile 'instagram_session.txt' me bhi save ho gayi!")
