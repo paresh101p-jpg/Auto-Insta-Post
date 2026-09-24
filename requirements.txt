@@ -1,0 +1,4 @@
+instagrapi
+requests
+google-generativeai
+urllib3
