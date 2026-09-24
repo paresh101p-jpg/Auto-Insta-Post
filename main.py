@@ -17,7 +17,7 @@ if not all([GEMINI_API_KEY, FB_PAGE_ID, FB_ACCESS_TOKEN]):
 client = genai.Client(api_key=GEMINI_API_KEY)
 IMAGES_FOLDER = "images"
 GEMINI_MODELS  = ["gemini-1.5-flash", "gemini-1.5-pro"]
-GITHUB_REPO_RAW_URL = "https://raw.githubusercontent.com/paresh101p-jpg/Auto-Insta-Post/main/"
+GITHUB_REPO_RAW_URL = "https://raw.githubusercontent.com/paresh101p-jpg/Auto-Insta-Post/master/"
 
 def get_next_image():
     if not os.path.exists(IMAGES_FOLDER):
