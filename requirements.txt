@@ -2,3 +2,4 @@ instagrapi
 requests
 google-genai
 urllib3
+Pillow

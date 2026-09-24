@@ -1,9 +1,14 @@
 import os
-import requests
+import io
+import json
 import time
+import base64
+import random
+import requests
+from urllib.parse import quote
+from PIL import Image
 from instagrapi import Client
 from google import genai
-from urllib.parse import quote
 
 # Secrets from GitHub Actions
 IG_USERNAME = os.environ.get("IG_USERNAME")
@@ -16,77 +21,87 @@ if not all([IG_USERNAME, IG_SESSION, GEMINI_API_KEY]):
 
 client = genai.Client(api_key=GEMINI_API_KEY)
 
-def generate_content():
+# Instagram feed photos: 4:5 (1080x1350) is the safest vertical size.
+# 9:16 (1080x1920) can get cropped/rejected for feed posts.
+IMG_WIDTH, IMG_HEIGHT = 1080, 1350
+IMAGE_PATH = "today_post.jpg"
+
+# Only models that actually exist right now (old 2.0/1.5 return 404)
+GEMINI_MODELS = ["gemini-3.6-flash"]
+
+
+def generate_thought():
     print("Generating a trending Hindi thought using Gemini...")
-    prompt = "Write ONE deep, trending, and beautiful short Hindi thought/quote (max 10 words). Only return the Hindi text, nothing else."
-    # Try multiple models in order (fallback if one is busy)
-    models_to_try = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-3.6-flash']
-    response = None
-    for model_name in models_to_try:
-        for attempt in range(3):  # Retry 3 times per model
+    prompt = ("Write ONE deep, trending, and beautiful short Hindi thought/quote "
+              "(max 10 words). Only return the Hindi text, nothing else.")
+    for model_name in GEMINI_MODELS:
+        for attempt in range(1, 6):
             try:
-                print(f"Trying model: {model_name} (attempt {attempt+1})...")
-                response = client.models.generate_content(
-                    model=model_name,
-                    contents=prompt
-                )
-                print(f"Success with model: {model_name}")
-                break
+                print(f"Trying model: {model_name} (attempt {attempt})...")
+                response = client.models.generate_content(model=model_name, contents=prompt)
+                text = response.text.strip().replace('"', '')
+                if text:
+                    print(f"Today's thought: {text}")
+                    return text
             except Exception as e:
                 print(f"Model {model_name} failed: {e}")
-                time.sleep(5)  # Wait 5 sec before retry
-        if response:
-            break
-    if not response:
-        raise Exception("All Gemini models failed. Try again later.")
+                time.sleep(5 * attempt)  # 503 = busy, wait longer each time
+    raise Exception("All Gemini attempts failed. Try again later.")
 
-    hindi_thought = response.text.strip().replace('"', '')
-    print(f"Today's thought: {hindi_thought}")
-    
-    # 2. Construct the Image Prompt as per user's strict requirement
-    image_prompt = f'''Create a premium, ultra-realistic Instagram photograph. 
-TEXT + LOCATION: "{hindi_thought}" — physically written/printed/painted on a beautiful ancient temple wall. 
-Make the text look 100% REAL and physically present on the specified location, like a professionally photographed real-world mockup — never like a digital overlay, pasted PNG, sticker, floating text or Photoshop layer. 
-Automatically adapt the typography to the exact surface. 
-Create artistic typography with beautiful complementary colors. 
-Include a beautiful Krishna flute (bansuri) and 2 peacock feathers (morpankh) beautifully placed in the composition. 
-At the bottom center, the text "PareshPadsala_" must be written visibly and clearly. 
-Ultra-realistic commercial photography, cinematic lighting, realistic materials, professional composition, HDR, sharp details, premium editorial look. vertical 9:16 aspect ratio.'''
 
-    # 3. Use Pollinations AI (free text-to-image API which uses Flux)
-    print("Generating Image...")
-    # Pollinations creates images just by visiting the URL with the prompt
-    encoded_prompt = quote(image_prompt)
-    image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1080&height=1920&nologo=true"
-    
-    return hindi_thought, image_url
+def build_image_prompt(thought):
+    # Kept short on purpose: very long prompts make the URL huge and Pollinations fails.
+    return (
+        f'Ultra-realistic premium Instagram photograph of an ancient temple wall with the Hindi text '
+        f'"{thought}" physically carved and painted on the stone, looking 100% real, not a digital overlay. '
+        f'Artistic Devanagari typography, warm complementary colors. '
+        f'A Krishna bansuri flute and two peacock feathers placed beautifully in the frame. '
+        f'Small text "PareshPadsala_" visible at the bottom center. '
+        f'Cinematic lighting, sharp details, HDR, editorial photography, vertical composition.'
+    )
+
+
+def download_image(prompt, path, retries=5):
+    """Download from Pollinations, VERIFY it is a real image, save as JPEG."""
+    encoded = quote(prompt, safe="")
+    for attempt in range(1, retries + 1):
+        seed = random.randint(1, 999999)
+        url = (f"https://image.pollinations.ai/prompt/{encoded}"
+               f"?width={IMG_WIDTH}&height={IMG_HEIGHT}&model=flux&nologo=true&seed={seed}")
+        print(f"Image attempt {attempt}/{retries} (URL length: {len(url)})...")
+        try:
+            r = requests.get(url, timeout=180)
+            ctype = r.headers.get("content-type", "")
+            if r.status_code == 200 and ctype.startswith("image"):
+                img = Image.open(io.BytesIO(r.content))
+                img.load()  # raises if the data is corrupt
+                img.convert("RGB").save(path, "JPEG", quality=95)
+                print(f"Image saved: {img.size}")
+                return
+            # This line shows the REAL reason if Pollinations refuses
+            print(f"Bad response: status={r.status_code}, type={ctype}, body={r.text[:300]!r}")
+        except Exception as e:
+            print(f"Image download failed: {e}")
+        time.sleep(10 * attempt)
+    raise Exception("Could not get a valid image from Pollinations.")
+
+
+def instagram_login():
+    print("Logging into Instagram via session...")
+    session_data = json.loads(base64.b64decode(IG_SESSION).decode())
+    sessionid = session_data.get("sessionid") or session_data.get("cookies", {}).get("sessionid", "")
+    cl = Client()
+    cl.login_by_sessionid(sessionid)
+    print("Session loaded successfully!")
+    return cl
+
 
 def main():
     try:
-        hindi_thought, img_url = generate_content()
-        
-        # Download Image
-        print(f"Downloading image from: {img_url}")
-        img_data = requests.get(img_url).content
-        image_path = "today_post.jpg"
-        with open(image_path, 'wb') as handler:
-            handler.write(img_data)
-            
-        print("Image saved successfully.")
-        
-        # Login using saved session (no password/2FA needed)
-        print("Logging into Instagram via session...")
-        import json, base64
-        cl = Client()
-        session_data = json.loads(base64.b64decode(IG_SESSION).decode())
-        # Extract sessionid and login directly
-        sessionid = session_data.get("sessionid") or session_data.get("cookies", {}).get("sessionid", "")
-        cl.login_by_sessionid(sessionid)
-        print("Session loaded successfully!")
+        thought = generate_thought()
+        download_image(build_image_prompt(thought), IMAGE_PATH)
 
-
-        
-        caption = f"""{hindi_thought}
+        caption = f"""{thought}
 
 ✨ Daily dose of inspiration and deep thoughts! ✨
 Krishna ki bansuri aur morpankh ka ashirwad aapke sath rahe. 🦚🌸
@@ -97,14 +112,16 @@ Aise hi aur amazing thoughts aur premium posts ke liye hume jarur follow karein!
 Like ❤️ | Comment 💬 | Share 🚀 | Save 📌
 
 #trending #hindi #thoughts #krishna #flute #peacockfeather #dailyquotes #PareshPadsala_ #hindiquotes #suvichar #krishnalove #radhakrishna #motivationalquotes #hindithoughts #inspirationalquotes #deepthoughts"""
-        
+
+        cl = instagram_login()
         print("Uploading to Instagram...")
-        cl.photo_upload(image_path, caption)
+        cl.photo_upload(IMAGE_PATH, caption)
         print("Successfully Posted!")
-        
+
     except Exception as e:
         print(f"An error occurred: {e}")
         exit(1)
+
 
 if __name__ == "__main__":
     main()
