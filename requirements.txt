@@ -1,4 +1,4 @@
 instagrapi
 requests
-google-generativeai
+google-genai
 urllib3

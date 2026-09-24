@@ -2,7 +2,7 @@ import os
 import requests
 import time
 from instagrapi import Client
-import google.generativeai as genai
+from google import genai
 from urllib.parse import quote
 
 # Secrets from GitHub Actions
@@ -14,15 +14,15 @@ if not all([IG_USERNAME, IG_PASSWORD, GEMINI_API_KEY]):
     print("Error: Please set IG_USERNAME, IG_PASSWORD, and GEMINI_API_KEY as environment variables.")
     exit(1)
 
-genai.configure(api_key=GEMINI_API_KEY)
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 def generate_content():
     print("Generating a trending Hindi thought using Gemini...")
-    model = genai.GenerativeModel('gemini-1.5-flash')
-    
-    # 1. Generate the Hindi quote
     prompt = "Write ONE deep, trending, and beautiful short Hindi thought/quote (max 10 words). Only return the Hindi text, nothing else."
-    response = model.generate_content(prompt)
+    response = client.models.generate_content(
+        model='gemini-2.5-flash',
+        contents=prompt
+    )
     hindi_thought = response.text.strip().replace('"', '')
     print(f"Today's thought: {hindi_thought}")
     
