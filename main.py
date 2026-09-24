@@ -63,30 +63,31 @@ def build_image_prompt(thought):
 
 
 def generate_image_gemini(prompt, path):
-    """Generate image using Gemini Imagen API and save as JPEG."""
-    print("Generating image using Gemini Imagen...")
+    """Generate image using Gemini flash image generation (free Developer API)."""
+    print("Generating image using Gemini Flash Image Generation...")
     for attempt in range(1, 4):
         try:
             print(f"Image generation attempt {attempt}/3...")
-            response = client.models.generate_images(
-                model="imagen-3.0-generate-001",
-                prompt=prompt,
-                config=types.GenerateImagesConfig(
-                    number_of_images=1,
-                    aspect_ratio="4:5",
-                    safety_filter_level="BLOCK_ONLY_HIGH",
-                    person_generation="ALLOW_ADULT",
+            response = client.models.generate_content(
+                model="gemini-2.0-flash-exp-image-generation",
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_modalities=["Text", "Image"]
                 )
             )
-            image_bytes = response.generated_images[0].image.image_bytes
-            img = Image.open(io.BytesIO(image_bytes))
-            img.convert("RGB").save(path, "JPEG", quality=95)
-            print(f"Image saved: {img.size}")
-            return
+            for part in response.candidates[0].content.parts:
+                if part.inline_data is not None:
+                    image_bytes = part.inline_data.data
+                    img = Image.open(io.BytesIO(image_bytes))
+                    img.convert("RGB").save(path, "JPEG", quality=95)
+                    print(f"Image saved successfully: {img.size}")
+                    return
+            print("No image found in response, retrying...")
         except Exception as e:
             print(f"Imagen attempt {attempt} failed: {e}")
             time.sleep(10 * attempt)
-    raise Exception("Gemini Imagen generation failed after 3 attempts.")
+    raise Exception("Gemini image generation failed after 3 attempts.")
+
 
 
 def instagram_login():
