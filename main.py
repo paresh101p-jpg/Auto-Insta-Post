@@ -7,11 +7,11 @@ from urllib.parse import quote
 
 # Secrets from GitHub Actions
 IG_USERNAME = os.environ.get("IG_USERNAME")
-IG_PASSWORD = os.environ.get("IG_PASSWORD")
+IG_SESSION = os.environ.get("IG_SESSION")  # Base64 encoded session
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
-if not all([IG_USERNAME, IG_PASSWORD, GEMINI_API_KEY]):
-    print("Error: Please set IG_USERNAME, IG_PASSWORD, and GEMINI_API_KEY as environment variables.")
+if not all([IG_USERNAME, IG_SESSION, GEMINI_API_KEY]):
+    print("Error: Please set IG_USERNAME, IG_SESSION, and GEMINI_API_KEY as environment variables.")
     exit(1)
 
 client = genai.Client(api_key=GEMINI_API_KEY)
@@ -74,10 +74,14 @@ def main():
             
         print("Image saved successfully.")
         
-        # Upload to Instagram
-        print("Logging into Instagram...")
+        # Login using saved session (no password/2FA needed)
+        print("Logging into Instagram via session...")
+        import json, base64
         cl = Client()
-        cl.login(IG_USERNAME, IG_PASSWORD)
+        session_data = json.loads(base64.b64decode(IG_SESSION).decode())
+        cl.set_settings(session_data)
+        cl.login(IG_USERNAME, "")  # Session auth - no password needed
+
         
         caption = f"""{hindi_thought}
 
