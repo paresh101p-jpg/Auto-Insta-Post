@@ -3,6 +3,8 @@ import io
 import json
 import time
 import base64
+import random
+import requests
 from PIL import Image
 from instagrapi import Client
 from google import genai
@@ -48,45 +50,42 @@ def generate_thought():
 
 
 def build_image_prompt(thought):
+    # Very specific Indian devotional scene - avoids Chinese/tomb/monument style
     return (
-        f'A stunning premium Instagram photograph in vertical 4:5 format. '
-        f'A beautiful Indian woman in traditional saree sitting near a vibrant colorful temple. '
-        f'She is holding a Krishna bansuri flute. '
-        f'Two beautiful peacock feathers (morpankh) placed elegantly nearby with marigold flowers. '
-        f'In the center, a decorative wooden board with the Hindi Devanagari text "{thought}" '
-        f'written in beautiful calligraphy. '
-        f'At the very bottom center, elegant small text reads "PareshPadsala_". '
-        f'Golden hour lighting, soft bokeh, ultra-realistic DSLR photography, '
-        f'vibrant Indian colors, cinematic premium editorial quality. '
-        f'Devotional Krishna aesthetic. No watermarks.'
+        f'hyperrealistic Instagram photo, beautiful Indian Hindu temple scene, '
+        f'golden hour sunlight, orange marigold flowers everywhere, '
+        f'a wooden signboard in the scene with Hindi text "{thought}" painted on it in saffron color, '
+        f'a Krishna bansuri flute lying on the ground, '
+        f'two colorful peacock feathers (morpankh) placed next to the flute, '
+        f'small text PareshPadsala written at bottom, '
+        f'warm vibrant colors, cinematic photography, bokeh background, '
+        f'NOT a tomb, NOT a monument, NOT Chinese, NOT Japanese, NOT dark, '
+        f'beautiful devotional Indian aesthetic'
     )
 
 
-def generate_image_gemini(prompt, path):
-    """Generate image using Gemini flash image generation (free Developer API)."""
-    print("Generating image using Gemini Flash Image Generation...")
-    for attempt in range(1, 4):
+def generate_image_pollinations(prompt, path, retries=5):
+    """Download from Pollinations AI - free image generation."""
+    base_url = "https://image.pollinations.ai/prompt/"
+    params = f"?width=1080&height=1350&model=flux&nologo=true"
+    for attempt in range(1, retries + 1):
+        seed = random.randint(10000, 999999)
+        url = base_url + requests.utils.quote(prompt, safe='') + params + f"&seed={seed}"
+        print(f"Image attempt {attempt}/{retries}...")
         try:
-            print(f"Image generation attempt {attempt}/3...")
-            response = client.models.generate_content(
-                model="gemini-2.0-flash-exp-image-generation",
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_modalities=["Text", "Image"]
-                )
-            )
-            for part in response.candidates[0].content.parts:
-                if part.inline_data is not None:
-                    image_bytes = part.inline_data.data
-                    img = Image.open(io.BytesIO(image_bytes))
-                    img.convert("RGB").save(path, "JPEG", quality=95)
-                    print(f"Image saved successfully: {img.size}")
-                    return
-            print("No image found in response, retrying...")
+            r = requests.get(url, timeout=120)
+            ctype = r.headers.get("content-type", "")
+            if r.status_code == 200 and "image" in ctype:
+                img = Image.open(io.BytesIO(r.content))
+                img.load()
+                img.convert("RGB").save(path, "JPEG", quality=95)
+                print(f"Image saved: {img.size}")
+                return
+            print(f"Bad response: {r.status_code}, {ctype}")
         except Exception as e:
-            print(f"Imagen attempt {attempt} failed: {e}")
-            time.sleep(10 * attempt)
-    raise Exception("Gemini image generation failed after 3 attempts.")
+            print(f"Attempt {attempt} failed: {e}")
+        time.sleep(8 * attempt)
+    raise Exception("Image generation failed after all attempts.")
 
 
 
@@ -103,7 +102,7 @@ def instagram_login():
 def main():
     try:
         thought = generate_thought()
-        generate_image_gemini(build_image_prompt(thought), IMAGE_PATH)
+        generate_image_pollinations(build_image_prompt(thought), IMAGE_PATH)
 
         caption = f"""{thought}
 
