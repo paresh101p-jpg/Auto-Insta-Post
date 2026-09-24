@@ -18,7 +18,7 @@ if not all([IG_USERNAME, IG_SESSION, GEMINI_API_KEY]):
 
 client = genai.Client(api_key=GEMINI_API_KEY)
 IMAGES_FOLDER = "images"
-GEMINI_MODELS  = ["gemini-3.6-flash"]
+GEMINI_MODELS  = ["gemini-1.5-flash", "gemini-1.5-pro"]
 
 
 def get_next_image():
@@ -49,7 +49,7 @@ def generate_caption(image_path):
         "2. A 3-4 line beautiful and deep explanation or thought inspired by the text in Hinglish.\n"
         "3. A call to action exactly like this:\n\n"
         "Aise hi aur amazing thoughts ke liye follow karein! 👇\n"
-        "👉 @PareshPadsala_\n\n"
+        "👉 @pareshpadsala_\n\n"
         "Like ❤️ | Comment 💬 | Share 🚀 | Save 📌\n\n"
         "4. At least 15-20 highly relevant hashtags at the bottom (e.g., #hindi #quotes #suvichar #PareshPadsala_ etc.). "
         "Do not include any extra text outside the caption itself."
@@ -78,11 +78,11 @@ def generate_caption(image_path):
 Zindagi me shanti aur prem hamesha bana rahe! 
 
 Aise hi aur amazing thoughts ke liye follow karein! 👇
-👉 @PareshPadsala_
+👉 @pareshpadsala_
 
 Like ❤️ | Comment 💬 | Share 🚀 | Save 📌
 
-#hindi #thoughts #krishna #dailyquotes #PareshPadsala_ #hindiquotes #suvichar #motivationalquotes"""
+#hindi #thoughts #krishna #dailyquotes #pareshpadsala_ #hindiquotes #suvichar #motivationalquotes"""
 
 def delete_posted_image(image_path):
     """Delete the posted image and commit the change to GitHub."""
