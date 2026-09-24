@@ -3,12 +3,10 @@ import io
 import json
 import time
 import base64
-import random
-import requests
-from urllib.parse import quote
 from PIL import Image
 from instagrapi import Client
 from google import genai
+from google.genai import types
 
 # Secrets from GitHub Actions
 IG_USERNAME = os.environ.get("IG_USERNAME")
@@ -51,42 +49,44 @@ def generate_thought():
 
 def build_image_prompt(thought):
     return (
-        f'A stunning premium Instagram photo in vertical format. '
-        f'A beautiful Indian woman in traditional attire sitting near a colorful temple, '
-        f'holding a Krishna bansuri flute, with 2 vibrant peacock feathers (morpankh) placed elegantly nearby. '
-        f'Warm golden hour lighting, marigold flowers, soft bokeh background. '
-        f'In the center of the image, the Hindi text "{thought}" is written in large, '
-        f'beautiful calligraphy style on a wooden board or stone slab in the scene. '
-        f'At the bottom of the image, small elegant text reads "PareshPadsala_". '
-        f'Ultra-realistic DSLR photography, vibrant colors, cinematic composition, '
-        f'NO Chinese symbols, NO tomb, NO monument, NO Japanese text. '
-        f'Indian temple aesthetic, devotional mood, premium editorial look.'
+        f'A stunning premium Instagram photograph in vertical 4:5 format. '
+        f'A beautiful Indian woman in traditional saree sitting near a vibrant colorful temple. '
+        f'She is holding a Krishna bansuri flute. '
+        f'Two beautiful peacock feathers (morpankh) placed elegantly nearby with marigold flowers. '
+        f'In the center, a decorative wooden board with the Hindi Devanagari text "{thought}" '
+        f'written in beautiful calligraphy. '
+        f'At the very bottom center, elegant small text reads "PareshPadsala_". '
+        f'Golden hour lighting, soft bokeh, ultra-realistic DSLR photography, '
+        f'vibrant Indian colors, cinematic premium editorial quality. '
+        f'Devotional Krishna aesthetic. No watermarks.'
     )
 
 
-def download_image(prompt, path, retries=5):
-    """Download from Pollinations, VERIFY it is a real image, save as JPEG."""
-    encoded = quote(prompt, safe="")
-    for attempt in range(1, retries + 1):
-        seed = random.randint(1, 999999)
-        url = (f"https://image.pollinations.ai/prompt/{encoded}"
-               f"?width={IMG_WIDTH}&height={IMG_HEIGHT}&model=flux&nologo=true&seed={seed}")
-        print(f"Image attempt {attempt}/{retries} (URL length: {len(url)})...")
+def generate_image_gemini(prompt, path):
+    """Generate image using Gemini Imagen API and save as JPEG."""
+    print("Generating image using Gemini Imagen...")
+    for attempt in range(1, 4):
         try:
-            r = requests.get(url, timeout=180)
-            ctype = r.headers.get("content-type", "")
-            if r.status_code == 200 and ctype.startswith("image"):
-                img = Image.open(io.BytesIO(r.content))
-                img.load()  # raises if the data is corrupt
-                img.convert("RGB").save(path, "JPEG", quality=95)
-                print(f"Image saved: {img.size}")
-                return
-            # This line shows the REAL reason if Pollinations refuses
-            print(f"Bad response: status={r.status_code}, type={ctype}, body={r.text[:300]!r}")
+            print(f"Image generation attempt {attempt}/3...")
+            response = client.models.generate_images(
+                model="imagen-3.0-generate-001",
+                prompt=prompt,
+                config=types.GenerateImagesConfig(
+                    number_of_images=1,
+                    aspect_ratio="4:5",
+                    safety_filter_level="BLOCK_ONLY_HIGH",
+                    person_generation="ALLOW_ADULT",
+                )
+            )
+            image_bytes = response.generated_images[0].image.image_bytes
+            img = Image.open(io.BytesIO(image_bytes))
+            img.convert("RGB").save(path, "JPEG", quality=95)
+            print(f"Image saved: {img.size}")
+            return
         except Exception as e:
-            print(f"Image download failed: {e}")
-        time.sleep(10 * attempt)
-    raise Exception("Could not get a valid image from Pollinations.")
+            print(f"Imagen attempt {attempt} failed: {e}")
+            time.sleep(10 * attempt)
+    raise Exception("Gemini Imagen generation failed after 3 attempts.")
 
 
 def instagram_login():
@@ -102,7 +102,7 @@ def instagram_login():
 def main():
     try:
         thought = generate_thought()
-        download_image(build_image_prompt(thought), IMAGE_PATH)
+        generate_image_gemini(build_image_prompt(thought), IMAGE_PATH)
 
         caption = f"""{thought}
 
