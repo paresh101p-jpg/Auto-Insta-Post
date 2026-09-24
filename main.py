@@ -88,8 +88,10 @@ def post_fb_feed(caption, image_url):
     res = requests.post(url, data=payload).json()
     if 'id' in res:
         print(f"✅ FB Feed Success (ID: {res['id']})")
+        return True
     else:
         print(f"❌ FB Feed Failed: {res}")
+        return False
 
 def post_fb_story(image_url):
     print("Posting to Facebook Story...")
@@ -98,8 +100,10 @@ def post_fb_story(image_url):
     res = requests.post(url, data=payload).json()
     if 'id' in res:
         print(f"✅ FB Story Success (ID: {res['id']})")
+        return True
     else:
         print(f"❌ FB Story Failed: {res}")
+        return False
 
 def post_ig_media(ig_account_id, caption, image_url, is_story=False):
     target = "Story" if is_story else "Feed"
@@ -118,7 +122,7 @@ def post_ig_media(ig_account_id, caption, image_url, is_story=False):
     
     if not creation_id:
         print(f"❌ IG Container Creation Failed for {target}: {res}")
-        return
+        return False
         
     # Step 2: Publish Container
     print(f"Publishing IG {target} container...")
@@ -133,14 +137,16 @@ def post_ig_media(ig_account_id, caption, image_url, is_story=False):
         pub_res = requests.post(pub_url, data=pub_payload).json()
         if 'id' in pub_res:
             print(f"✅ IG {target} Success (ID: {pub_res['id']})")
-            return
+            return True
         elif pub_res.get('error', {}).get('code') == 9007:
             # Media not ready, wait and retry
             print(f"Media not ready, retrying... (Attempt {attempt+1}/6)")
             time.sleep(10)
         else:
             print(f"❌ IG Publish Failed for {target}: {pub_res}")
-            return
+            return False
+            
+    return False
 
 def delete_posted_image(image_path):
     print(f"Deleting posted image: {image_path}")
@@ -169,8 +175,11 @@ def main():
         # Step 3: Extract and generate full caption using Gemini
         caption = generate_caption(image_path)
 
+        success = False
+
         # Step 4: Post to Facebook Feed
-        post_fb_feed(caption, public_image_url)
+        if post_fb_feed(caption, public_image_url):
+            success = True
         
         # Step 5: Post to Facebook Story
         post_fb_story(public_image_url)
@@ -179,12 +188,16 @@ def main():
         ig_account_id = get_ig_account_id()
         if ig_account_id:
             # Post to IG Feed
-            post_ig_media(ig_account_id, caption, public_image_url, is_story=False)
+            if post_ig_media(ig_account_id, caption, public_image_url, is_story=False):
+                success = True
             # Post to IG Story
             post_ig_media(ig_account_id, "", public_image_url, is_story=True)
 
-        # Step 8: Delete posted image so it never repeats
-        delete_posted_image(image_path)
+        # Step 8: Delete posted image only if at least one Feed post was successful
+        if success:
+            delete_posted_image(image_path)
+        else:
+            print("❌ All posts failed. Not deleting the image to avoid data loss.")
 
     except Exception as e:
         print(f"An error occurred: {e}")

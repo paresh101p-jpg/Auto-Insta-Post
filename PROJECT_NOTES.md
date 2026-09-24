@@ -84,4 +84,14 @@ Like ❤️ | Comment 💬 | Share 🚀 | Save 📌
 
 ---
 
+---
+
+## Kal Ke Liye Reminder (Sep 25, 2026)
+1. **Current Status:** Bot code puri tarah ban chuka hai. Lekin GitHub Actions mein abhi bhi purana wala token hi chal raha hai (Logs mein `Missing Permissions` aa raha hai aur Image Delete ho rahi hai bina post hue).
+2. **FB Par Jo Post Aaya:** Aaj jo FB par post successful hui, wo darasal **Maine (AI) ne manual test run ki thi**. GitHub Actions se abhi post hona baaki hai.
+3. **Kal Kya Karna Hai:**
+   - Maine `main.py` me ek naya Fix daala hai jisse ab image bina post hue Delete nahi hogi!
+   - Kal aate hi sabse pehle Github Secrets me `FB_ACCESS_TOKEN` ko **Sahi se Update/Paste** karna hai (jo `fb_permanent_token.txt` mein hai).
+   - Fir uske baad `Sync Changes` karke GitHub Actions pe manually ek baar chala kar dekhna hai.
+
 *Last Updated: September 24, 2026*
