@@ -20,7 +20,7 @@ def generate_content():
     print("Generating a trending Hindi thought using Gemini...")
     prompt = "Write ONE deep, trending, and beautiful short Hindi thought/quote (max 10 words). Only return the Hindi text, nothing else."
     response = client.models.generate_content(
-        model='gemini-2.5-flash',
+        model='gemini-3.6-flash',
         contents=prompt
     )
     hindi_thought = response.text.strip().replace('"', '')
