@@ -62,7 +62,18 @@ def main():
         cl = Client()
         cl.login(IG_USERNAME, IG_PASSWORD)
         
-        caption = f"{hindi_thought}\n\n#trending #hindi #thoughts #krishna #flute #peacockfeather #dailyquotes #PareshPadsala_"
+        caption = f"""{hindi_thought}
+
+✨ Daily dose of inspiration and deep thoughts! ✨
+Krishna ki bansuri aur morpankh ka ashirwad aapke sath rahe. 🦚🌸
+
+Aise hi aur amazing thoughts aur premium posts ke liye hume jarur follow karein! 👇
+👉 @PareshPadsala_ 
+👉 @PareshPadsala_
+
+Like ❤️ | Comment 💬 | Share 🚀 | Save 📌
+
+#trending #hindi #thoughts #krishna #flute #peacockfeather #dailyquotes #PareshPadsala_ #hindiquotes #suvichar #krishnalove #radhakrishna #motivationalquotes #hindithoughts #inspirationalquotes #deepthoughts"""
         
         print("Uploading to Instagram...")
         cl.photo_upload(image_path, caption)
