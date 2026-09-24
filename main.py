@@ -68,7 +68,6 @@ def main():
 Krishna ki bansuri aur morpankh ka ashirwad aapke sath rahe. 🦚🌸
 
 Aise hi aur amazing thoughts aur premium posts ke liye hume jarur follow karein! 👇
-👉 @PareshPadsala_ 
 👉 @PareshPadsala_
 
 Like ❤️ | Comment 💬 | Share 🚀 | Save 📌
