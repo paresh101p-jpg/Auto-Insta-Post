@@ -79,10 +79,11 @@ def main():
         import json, base64
         cl = Client()
         session_data = json.loads(base64.b64decode(IG_SESSION).decode())
-        cl.set_settings(session_data)
-        # Use sessionid cookie directly - no login() call needed!
-        cl.cookie_dict = {"sessionid": session_data.get("sessionid", session_data.get("cookies", {}).get("sessionid", ""))}
+        # Extract sessionid and login directly
+        sessionid = session_data.get("sessionid") or session_data.get("cookies", {}).get("sessionid", "")
+        cl.login_by_sessionid(sessionid)
         print("Session loaded successfully!")
+
 
         
         caption = f"""{hindi_thought}
