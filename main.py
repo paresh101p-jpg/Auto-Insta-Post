@@ -40,11 +40,20 @@ def generate_caption(image_path):
     """Read the exact Hindi thought written ON the image using Gemini Vision."""
     print("Reading Hindi text from the image using Gemini Vision...")
     prompt = (
-        "Read the Hindi text written on this image. "
-        "Return ONLY the exact Hindi text you see in the image, nothing else. "
-        "Do not add any quotes or extra words."
+        "You are an expert Instagram Social Media Manager. Look at the image provided. "
+        "First, extract the exact Hindi text written on the image. "
+        "Then, write a long, engaging Instagram caption in a mix of Hindi and English (Hinglish) based on that text. "
+        "Your response MUST be the final Instagram caption, formatted beautifully with emojis. "
+        "Include the following elements in this exact order:\n"
+        "1. The exact Hindi text from the image at the very top.\n"
+        "2. A 3-4 line beautiful and deep explanation or thought inspired by the text in Hinglish.\n"
+        "3. A call to action exactly like this:\n\n"
+        "Aise hi aur amazing thoughts ke liye follow karein! 👇\n"
+        "👉 @PareshPadsala_\n\n"
+        "Like ❤️ | Comment 💬 | Share 🚀 | Save 📌\n\n"
+        "4. At least 15-20 highly relevant hashtags at the bottom (e.g., #hindi #quotes #suvichar #PareshPadsala_ etc.). "
+        "Do not include any extra text outside the caption itself."
     )
-    
     img = Image.open(image_path)
     
     for model_name in GEMINI_MODELS:
@@ -55,15 +64,25 @@ def generate_caption(image_path):
                     model=model_name, 
                     contents=[img, prompt]
                 )
-                text = resp.text.strip().replace('"', '')
+                text = resp.text.strip()
                 if text:
-                    print(f"Extracted Caption: {text}")
+                    print(f"Extracted Caption:\n{text}\n")
                     return text
             except Exception as e:
                 print(f"Failed: {e}")
                 time.sleep(5 * attempt)
-    return "कृष्णा की बांसुरी और मोरपंख का आशीर्वाद आपके साथ रहे।"  # fallback
+    
+    # Fallback caption if Gemini fails completely
+    return """कृष्णा की बांसुरी और मोरपंख का आशीर्वाद आपके साथ रहे। 🦚🌸
 
+Zindagi me shanti aur prem hamesha bana rahe! 
+
+Aise hi aur amazing thoughts ke liye follow karein! 👇
+👉 @PareshPadsala_
+
+Like ❤️ | Comment 💬 | Share 🚀 | Save 📌
+
+#hindi #thoughts #krishna #dailyquotes #PareshPadsala_ #hindiquotes #suvichar #motivationalquotes"""
 
 def delete_posted_image(image_path):
     """Delete the posted image and commit the change to GitHub."""
@@ -96,21 +115,8 @@ def main():
         # Step 1: Get next image from folder
         image_path = get_next_image()
 
-        # Step 2: Extract caption from the image itself
-        thought = generate_caption(image_path)
-
-        # Step 3: Build Instagram caption
-        caption = f"""{thought}
-
-✨ Daily dose of inspiration and deep thoughts! ✨
-Krishna ki bansuri aur morpankh ka ashirwad aapke sath rahe. 🦚🌸
-
-Aise hi aur amazing thoughts ke liye follow karein! 👇
-👉 @PareshPadsala_
-
-Like ❤️ | Comment 💬 | Share 🚀 | Save 📌
-
-#trending #hindi #thoughts #krishna #flute #peacockfeather #dailyquotes #PareshPadsala_ #hindiquotes #suvichar #krishnalove #radhakrishna #motivationalquotes #hindithoughts #inspirationalquotes #deepthoughts"""
+        # Step 2 & 3: Extract and generate full caption using Gemini
+        caption = generate_caption(image_path)
 
         # Step 4: Post to Instagram
         cl = instagram_login()
