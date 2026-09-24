@@ -2,8 +2,8 @@ name: Auto Instagram Post
 
 on:
   schedule:
-    # Runs every day at 10:00 AM UTC (which is 3:30 PM IST)
-    - cron: '0 10 * * *'
+    # Runs every day at 15:30 UTC (which is 9:00 PM IST)
+    - cron: '30 15 * * *'
   workflow_dispatch: # Allows manual trigger from GitHub UI
 
 jobs:
