@@ -9,6 +9,8 @@ on:
 jobs:
   post-to-instagram:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Ye permission deni zaroori hai image delete (commit) karne ke liye
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
