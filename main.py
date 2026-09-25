@@ -100,14 +100,30 @@ def post_fb_feed(caption, image_url):
 
 def post_fb_story(image_url):
     print("Posting to Facebook Story...")
+    # Method 1: photo_stories
     url = f"https://graph.facebook.com/v20.0/{FB_PAGE_ID}/photo_stories"
     payload = {'url': image_url, 'access_token': FB_ACCESS_TOKEN}
     res = requests.post(url, data=payload).json()
     if 'id' in res:
         print(f"✅ FB Story Success (ID: {res['id']})")
         return True
+    print(f"photo_stories failed: {res.get('error', {}).get('message', '')}")
+    
+    # Method 2: Try as a regular photo with no_story=False (story only)
+    print("Trying alternate FB Story method...")
+    url2 = f"https://graph.facebook.com/v20.0/{FB_PAGE_ID}/photos"
+    payload2 = {
+        'url': image_url,
+        'published': 'false',
+        'no_story': 'false',
+        'access_token': FB_ACCESS_TOKEN
+    }
+    res2 = requests.post(url2, data=payload2).json()
+    if 'id' in res2:
+        print(f"✅ FB Story (Method 2) Success (ID: {res2['id']})")
+        return True
     else:
-        print(f"❌ FB Story Failed: {res}")
+        print(f"❌ FB Story Failed (both methods): {res2}")
         return False
 
 def post_ig_media(ig_account_id, caption, image_url, is_story=False):
@@ -200,11 +216,12 @@ def main():
 
         # Step 8: Delete posted image only if at least one Feed post was successful
         if success:
-            print("⏳ All posts done. Waiting for 1 hour (3600 seconds) before deleting the image...")
-            time.sleep(3600)
+            print("⏳ All posts done. Waiting 5 minutes before deleting image from GitHub...")
+            time.sleep(300)
             delete_posted_image(image_path)
         else:
             print("❌ All posts failed. Not deleting the image to avoid data loss.")
+
 
     except Exception as e:
         print(f"An error occurred: {e}")
