@@ -21,56 +21,78 @@ print(f"[DEBUG] Token starts with: {FB_ACCESS_TOKEN[:20]}...")
 
 client = genai.Client(api_key=GEMINI_API_KEY)
 IMAGES_FOLDER = "images"
-GEMINI_MODELS  = ["gemini-3.8-flash", "gemini-3.8-flash-001"]
+GEMINI_MODELS  = ["gemini-1.5-flash", "gemini-1.5-pro"]
 GITHUB_REPO_RAW_URL = "https://raw.githubusercontent.com/paresh101p-jpg/Auto-Insta-Post/master/"
 
-def get_next_image():
+def get_next_media():
     if not os.path.exists(IMAGES_FOLDER):
-        raise Exception(f"'{IMAGES_FOLDER}' folder not found! Upload images there first.")
+        raise Exception(f"'{IMAGES_FOLDER}' folder not found! Upload media there first.")
     files = sorted([
         f for f in os.listdir(IMAGES_FOLDER)
-        if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp"))
+        if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp", ".mp4"))
     ])
     if not files:
-        raise Exception("No images left in 'images/' folder! Please upload more images.")
+        raise Exception("No media left in 'images/' folder! Please upload more.")
     chosen = os.path.join(IMAGES_FOLDER, files[0])
-    print(f"Using image: {chosen} ({len(files)} remaining)")
+    print(f"Using media: {chosen} ({len(files)} remaining)")
     return chosen
 
-def generate_caption(image_path):
-    print("Reading Hindi text from the image using Gemini Vision...")
+def generate_caption(media_path):
+    is_video = media_path.lower().endswith('.mp4')
+    print(f"Analyzing {'video' if is_video else 'image'} using Gemini Vision...")
+    
     prompt = (
-        "You are an expert Instagram Social Media Manager. Look at the image provided. "
-        "First, extract the exact Hindi text written on the image. "
-        "Then, write a long, engaging Instagram caption in a mix of Hindi and English (Hinglish) based on that text. "
+        "You are an expert Instagram Social Media Manager for a devotional page. Look at the content provided. "
+        "If there is any Hindi text visible, extract it exactly. "
+        "Then, write a long, engaging, and deep spiritual Instagram caption in a mix of Hindi and English (Hinglish) inspired by the content. "
         "Your response MUST be the final Instagram caption, formatted beautifully with emojis. "
         "Include the following elements in this exact order:\n"
-        "1. The exact Hindi text from the image at the very top.\n"
-        "2. A 3-4 line beautiful and deep explanation or thought inspired by the text in Hinglish.\n"
+        "1. The exact Hindi text from the image/video at the very top (if any).\n"
+        "2. A 3-4 line beautiful and deep devotional explanation or thought in Hinglish.\n"
         "3. A call to action exactly like this:\n\n"
         "Aise hi aur amazing thoughts ke liye follow karein! 👇\n"
         "👉 @pareshpadsala_\n\n"
         "Like ❤️ | Comment 💬 | Share 🚀 | Save 📌\n\n"
-        "4. At least 15-20 highly relevant hashtags at the bottom (e.g., #hindi #quotes #suvichar #PareshPadsala_ etc.). "
+        "4. At least 15-20 highly relevant hashtags at the bottom (e.g., #hindi #thoughts #krishna #suvichar #PareshPadsala_ etc.). "
         "Do not include any extra text outside the caption itself."
     )
-    img = Image.open(image_path)
     
-    for model_name in GEMINI_MODELS:
-        for attempt in range(1, 4):
+    content_to_pass = None
+    uploaded_file = None
+    
+    try:
+        if is_video:
+            print("Uploading video to Gemini...")
+            uploaded_file = client.files.upload(file=media_path)
+            while uploaded_file.state.name == "PROCESSING":
+                time.sleep(3)
+                uploaded_file = client.files.get(name=uploaded_file.name)
+            content_to_pass = uploaded_file
+        else:
+            content_to_pass = Image.open(media_path)
+            
+        for model_name in GEMINI_MODELS:
+            for attempt in range(1, 4):
+                try:
+                    print(f"Trying {model_name} (attempt {attempt})...")
+                    resp = client.models.generate_content(
+                        model=model_name, 
+                        contents=[content_to_pass, prompt]
+                    )
+                    text = resp.text.strip()
+                    if text:
+                        print(f"Extracted Caption Generated!\n")
+                        return text
+                except Exception as e:
+                    print(f"Failed: {e}")
+                    time.sleep(5 * attempt)
+    finally:
+        if uploaded_file:
             try:
-                print(f"Trying {model_name} (attempt {attempt})...")
-                resp = client.models.generate_content(
-                    model=model_name, 
-                    contents=[img, prompt]
-                )
-                text = resp.text.strip()
-                if text:
-                    print(f"Extracted Caption Generated!\n")
-                    return text
-            except Exception as e:
-                print(f"Failed: {e}")
-                time.sleep(5 * attempt)
+                client.files.delete(name=uploaded_file.name)
+                print("Cleaned up video from Gemini storage.")
+            except:
+                pass
     
     return """कृष्णा की बांसुरी और मोरपंख का आशीर्वाद आपके साथ रहे। 🦚🌸\n\nZindagi me shanti aur prem hamesha bana rahe!\n\nAise hi aur amazing thoughts ke liye follow karein! 👇\n👉 @pareshpadsala_\n\nLike ❤️ | Comment 💬 | Share 🚀 | Save 📌\n\n#hindi #thoughts #krishna #dailyquotes #pareshpadsala_ #hindiquotes #suvichar #motivationalquotes"""
 
@@ -85,11 +107,17 @@ def get_ig_account_id():
         print("Warning: No Instagram Business Account linked to this Facebook Page.")
     return ig_id
 
-def post_fb_feed(caption, image_url):
-    print("Posting to Facebook Feed...")
+def post_fb_feed(caption, media_url, is_video=False):
+    print(f"Posting to Facebook Feed ({'Video' if is_video else 'Photo'})...")
     fb_caption = caption.replace("@pareshpadsala_", "@Krishna Vibez")
-    url = f"https://graph.facebook.com/v20.0/{FB_PAGE_ID}/photos"
-    payload = {'message': fb_caption, 'url': image_url, 'access_token': FB_ACCESS_TOKEN}
+    
+    if is_video:
+        url = f"https://graph.facebook.com/v20.0/{FB_PAGE_ID}/videos"
+        payload = {'description': fb_caption, 'file_url': media_url, 'access_token': FB_ACCESS_TOKEN}
+    else:
+        url = f"https://graph.facebook.com/v20.0/{FB_PAGE_ID}/photos"
+        payload = {'message': fb_caption, 'url': media_url, 'access_token': FB_ACCESS_TOKEN}
+        
     res = requests.post(url, data=payload).json()
     if 'id' in res:
         print(f"✅ FB Feed Success (ID: {res['id']})")
@@ -126,17 +154,27 @@ def post_fb_story(image_url):
         print(f"❌ FB Story Failed (both methods): {res2}")
         return False
 
-def post_ig_media(ig_account_id, caption, image_url, is_story=False):
-    target = "Story" if is_story else "Feed"
+def post_ig_media(ig_account_id, caption, media_url, is_story=False, is_video=False):
+    target = "Story" if is_story else ("Reel" if is_video else "Feed")
     print(f"Posting to Instagram {target}...")
     
     # Step 1: Create Container
     url = f"https://graph.facebook.com/v20.0/{ig_account_id}/media"
-    payload = {'image_url': image_url, 'access_token': FB_ACCESS_TOKEN}
-    if is_story:
-        payload['media_type'] = 'STORIES'
+    payload = {'access_token': FB_ACCESS_TOKEN}
+    
+    if is_video:
+        payload['video_url'] = media_url
+        if is_story:
+            payload['media_type'] = 'STORIES'
+        else:
+            payload['media_type'] = 'REELS'
+            payload['caption'] = caption
     else:
-        payload['caption'] = caption
+        payload['image_url'] = media_url
+        if is_story:
+            payload['media_type'] = 'STORIES'
+        else:
+            payload['caption'] = caption
         
     res = requests.post(url, data=payload).json()
     creation_id = res.get('id')
@@ -150,9 +188,20 @@ def post_ig_media(ig_account_id, caption, image_url, is_story=False):
     pub_url = f"https://graph.facebook.com/v20.0/{ig_account_id}/media_publish"
     pub_payload = {'creation_id': creation_id, 'access_token': FB_ACCESS_TOKEN}
     
-    # Wait a few seconds for IG to process the image container
-    print("Waiting 15 seconds for Instagram to process the image...")
-    time.sleep(15)
+    # Wait for processing
+    if is_video:
+        status = "IN_PROGRESS"
+        while status != "FINISHED":
+            time.sleep(10)
+            status_res = requests.get(f"https://graph.facebook.com/v20.0/{creation_id}?fields=status_code&access_token={FB_ACCESS_TOKEN}").json()
+            status = status_res.get('status_code', 'ERROR')
+            print(f"Video Status: {status}")
+            if status == "ERROR" or status == "EXPIRED":
+                print(f"❌ Video Processing Failed!")
+                return False
+    else:
+        print("Waiting 15 seconds for Instagram to process the image...")
+        time.sleep(15)
     
     for attempt in range(6):
         pub_res = requests.post(pub_url, data=pub_payload).json()
@@ -169,58 +218,56 @@ def post_ig_media(ig_account_id, caption, image_url, is_story=False):
             
     return False
 
-def delete_posted_image(image_path):
-    print(f"Deleting posted image: {image_path}")
-    os.remove(image_path)
+def delete_posted_media(media_path):
+    print(f"Deleting posted media: {media_path}")
+    os.remove(media_path)
     try:
         subprocess.run(["git", "config", "user.email", "bot@autopost.com"], check=True)
         subprocess.run(["git", "config", "user.name", "Auto Post Bot"], check=True)
         subprocess.run(["git", "add", "-A"], check=True)
-        subprocess.run(["git", "commit", "-m", f"Posted and removed: {os.path.basename(image_path)}"], check=True)
+        subprocess.run(["git", "commit", "-m", f"Posted and removed: {os.path.basename(media_path)}"], check=True)
         subprocess.run(["git", "push"], check=True)
-        print("Image deleted and pushed to GitHub!")
+        print("Media deleted and pushed to GitHub!")
     except Exception as e:
         print(f"Git push warning: {e}")
 
 def main():
     try:
-        # Step 1: Get next image from folder
-        image_path = get_next_image()
+        media_path = get_next_media()
+        media_filename = os.path.basename(media_path)
+        is_video = media_filename.lower().endswith('.mp4')
         
-        # Step 2: Convert local path to GitHub Raw URL
-        # e.g. "images/123.jpg" -> "https://raw.github.../images/123.jpg"
-        clean_path = image_path.replace("\\", "/")
-        public_image_url = GITHUB_REPO_RAW_URL + clean_path
-        print(f"Generated Public URL: {public_image_url}")
+        clean_path = media_path.replace("\\", "/")
+        public_media_url = GITHUB_REPO_RAW_URL + clean_path
+        print(f"Generated Public URL: {public_media_url}")
 
-        # Step 3: Extract and generate full caption using Gemini
-        caption = generate_caption(image_path)
+        caption = generate_caption(media_path)
 
         success = False
 
-        # Step 4: Post to Facebook Feed
-        if post_fb_feed(caption, public_image_url):
+        # Post to Facebook Feed
+        if post_fb_feed(caption, public_media_url, is_video=is_video):
             success = True
         
-        # Step 5: Post to Facebook Story
-        post_fb_story(public_image_url)
+        # Post to Facebook Story (only for images, video story API is unstable)
+        if not is_video:
+            post_fb_story(public_media_url)
 
-        # Step 6 & 7: Instagram Posting (If linked)
+        # Instagram Posting
         ig_account_id = get_ig_account_id()
         if ig_account_id:
-            # Post to IG Feed
-            if post_ig_media(ig_account_id, caption, public_image_url, is_story=False):
+            # Post to IG Feed/Reel
+            if post_ig_media(ig_account_id, caption, public_media_url, is_story=False, is_video=is_video):
                 success = True
             # Post to IG Story
-            post_ig_media(ig_account_id, "", public_image_url, is_story=True)
+            post_ig_media(ig_account_id, "", public_media_url, is_story=True, is_video=is_video)
 
-        # Step 8: Delete posted image only if at least one Feed post was successful
         if success:
-            print("⏳ All posts done. Waiting 5 minutes (300s) before deleting image from GitHub...")
+            print("⏳ All posts done. Waiting 5 minutes (300s) before deleting media from GitHub...")
             time.sleep(300)
-            delete_posted_image(image_path)
+            delete_posted_media(media_path)
         else:
-            print("❌ All posts failed. Not deleting the image to avoid data loss.")
+            print("❌ All posts failed. Not deleting the media to avoid data loss.")
 
 
     except Exception as e:
