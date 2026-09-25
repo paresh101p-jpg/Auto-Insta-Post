@@ -7,12 +7,17 @@ from PIL import Image
 
 # Secrets from GitHub Actions
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-FB_PAGE_ID = os.environ.get("FB_PAGE_ID")
 FB_ACCESS_TOKEN = os.environ.get("FB_ACCESS_TOKEN")
 
-if not all([GEMINI_API_KEY, FB_PAGE_ID, FB_ACCESS_TOKEN]):
-    print("Error: Please set GEMINI_API_KEY, FB_PAGE_ID, and FB_ACCESS_TOKEN in GitHub Secrets.")
+# Page ID hardcoded (verified working: Krishna Vibez)
+FB_PAGE_ID = "1808917602588221"
+
+if not all([GEMINI_API_KEY, FB_ACCESS_TOKEN]):
+    print("Error: Please set GEMINI_API_KEY and FB_ACCESS_TOKEN in GitHub Secrets.")
     exit(1)
+
+print(f"[DEBUG] Using Page ID: {FB_PAGE_ID}")
+print(f"[DEBUG] Token starts with: {FB_ACCESS_TOKEN[:20]}...")
 
 client = genai.Client(api_key=GEMINI_API_KEY)
 IMAGES_FOLDER = "images"
