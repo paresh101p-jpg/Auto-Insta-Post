@@ -195,6 +195,8 @@ def main():
 
         # Step 8: Delete posted image only if at least one Feed post was successful
         if success:
+            print("⏳ All posts done. Waiting for 1 hour (3600 seconds) before deleting the image...")
+            time.sleep(3600)
             delete_posted_image(image_path)
         else:
             print("❌ All posts failed. Not deleting the image to avoid data loss.")
