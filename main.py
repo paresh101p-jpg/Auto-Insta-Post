@@ -52,7 +52,7 @@ def generate_caption(media_path):
         "3. A call to action exactly like this:\n\n"
         "Aise hi aur amazing thoughts ke liye follow karein! 👇\n"
         "Instagram: @pareshpadsala_\n"
-        "Facebook: https://www.facebook.com/KrishnaVibez/\n\n"
+        "Facebook: @KrishnaVibez\n\n"
         "Like ❤️ | Comment 💬 | Share 🚀 | Save 📌\n\n"
         "4. At least 15-20 highly relevant hashtags at the bottom (e.g., #hindi #thoughts #krishna #suvichar #PareshPadsala_ etc.). "
         "Do not include any extra text outside the caption itself."
@@ -95,7 +95,7 @@ def generate_caption(media_path):
             except:
                 pass
     
-    return """कृष्णा की बांसुरी और मोरपंख का आशीर्वाद आपके साथ रहे। 🦚🌸\n\nZindagi me shanti aur prem hamesha bana rahe!\n\nAise hi aur amazing thoughts ke liye follow karein! 👇\nInstagram: @pareshpadsala_\nFacebook: https://www.facebook.com/KrishnaVibez/\n\nLike ❤️ | Comment 💬 | Share 🚀 | Save 📌\n\n#hindi #thoughts #krishna #dailyquotes #pareshpadsala_ #hindiquotes #suvichar #motivationalquotes"""
+    return """कृष्णा की बांसुरी और मोरपंख का आशीर्वाद आपके साथ रहे। 🦚🌸\n\nZindagi me shanti aur prem hamesha bana rahe!\n\nAise hi aur amazing thoughts ke liye follow karein! 👇\nInstagram: @pareshpadsala_\nFacebook: @KrishnaVibez\n\nLike ❤️ | Comment 💬 | Share 🚀 | Save 📌\n\n#hindi #thoughts #krishna #dailyquotes #pareshpadsala_ #hindiquotes #suvichar #motivationalquotes"""
 
 def get_ig_account_id():
     print("Fetching connected Instagram Account ID...")
