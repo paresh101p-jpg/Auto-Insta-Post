@@ -23,7 +23,7 @@ print(f"[DEBUG] Token starts with: {FB_ACCESS_TOKEN[:20]}...")
 client = genai.Client(api_key=GEMINI_API_KEY)
 IMAGES_FOLDER = "images"
 GEMINI_MODELS  = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
-GITHUB_REPO_RAW_URL = "https://raw.githubusercontent.com/paresh101p-jpg/Auto-Insta-Post/master/"
+GITHUB_REPO_RAW_URL = "https://raw.githubusercontent.com/paresh101p-jpg/Auto-Insta-Krishna/master/"
 
 def get_next_media():
     if not os.path.exists(IMAGES_FOLDER):
