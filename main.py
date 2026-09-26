@@ -27,7 +27,7 @@ GITHUB_REPO_RAW_URL = "https://raw.githubusercontent.com/paresh101p-jpg/Auto-Ins
 
 def get_next_media():
     if not os.path.exists(IMAGES_FOLDER):
-        raise Exception(f"'{IMAGES_FOLDER}' folder not found! Upload media there first.")
+        os.makedirs(IMAGES_FOLDER)
     files = sorted([
         f for f in os.listdir(IMAGES_FOLDER)
         if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp", ".mp4"))
@@ -37,6 +37,41 @@ def get_next_media():
     chosen = os.path.join(IMAGES_FOLDER, files[0])
     print(f"Using media: {chosen} ({len(files)} remaining)")
     return chosen
+
+POSTED_FOLDER = "posted_images"
+
+def cleanup_old_posted_media():
+    if not os.path.exists(POSTED_FOLDER):
+        os.makedirs(POSTED_FOLDER)
+    files = os.listdir(POSTED_FOLDER)
+    if files:
+        for f in files:
+            os.remove(os.path.join(POSTED_FOLDER, f))
+        try:
+            subprocess.run(["git", "config", "user.email", "actions@github.com"], check=True)
+            subprocess.run(["git", "config", "user.name", "Auto Insta Bot"], check=True)
+            subprocess.run(["git", "add", "-A"], check=True)
+            subprocess.run(["git", "commit", "-m", "Cleaned up old posted media"], check=True)
+            subprocess.run(["git", "push"], check=True)
+            print("Cleaned up old posted images and pushed.")
+        except Exception as e:
+            print(f"Git push warning during cleanup: {e}")
+
+def move_media_and_push(media_path):
+    if not os.path.exists(POSTED_FOLDER):
+        os.makedirs(POSTED_FOLDER)
+    new_path = os.path.join(POSTED_FOLDER, os.path.basename(media_path))
+    os.rename(media_path, new_path)
+    try:
+        subprocess.run(["git", "config", "user.email", "actions@github.com"], check=True)
+        subprocess.run(["git", "config", "user.name", "Auto Insta Bot"], check=True)
+        subprocess.run(["git", "add", "-A"], check=True)
+        subprocess.run(["git", "commit", "-m", f"Moved to posted: {os.path.basename(media_path)}"], check=True)
+        subprocess.run(["git", "push"], check=True)
+        print("Media moved to posted folder and pushed to GitHub immediately!")
+    except Exception as e:
+        print(f"Git push warning during move: {e}")
+    return new_path
 
 def generate_caption(media_path):
     is_video = media_path.lower().endswith('.mp4')
@@ -226,22 +261,14 @@ def post_ig_media(ig_account_id, caption, media_url, is_story=False, is_video=Fa
             
     return False
 
-def delete_posted_media(media_path):
-    print(f"Deleting posted media: {media_path}")
-    os.remove(media_path)
-    try:
-        subprocess.run(["git", "config", "user.email", "bot@autopost.com"], check=True)
-        subprocess.run(["git", "config", "user.name", "Auto Post Bot"], check=True)
-        subprocess.run(["git", "add", "-A"], check=True)
-        subprocess.run(["git", "commit", "-m", f"Posted and removed: {os.path.basename(media_path)}"], check=True)
-        subprocess.run(["git", "push"], check=True)
-        print("Media deleted and pushed to GitHub!")
-    except Exception as e:
-        print(f"Git push warning: {e}")
+
 
 def main():
     try:
+        cleanup_old_posted_media()
+        
         media_path = get_next_media()
+        media_path = move_media_and_push(media_path)
         media_filename = os.path.basename(media_path)
         is_video = media_filename.lower().endswith('.mp4')
         
@@ -272,12 +299,9 @@ def main():
             post_ig_media(ig_account_id, "", public_media_url, is_story=True, is_video=is_video)
 
         if success:
-            print("⏳ All posts done. Waiting 5 minutes (300s) before deleting media from GitHub...")
-            time.sleep(300)
-            delete_posted_media(media_path)
+            print("✅ All posts done successfully! Media is already in posted_images folder.")
         else:
-            print("❌ All posts failed. Not deleting the media to avoid data loss.")
-
+            print("❌ All posts failed. Media remains in posted_images folder.")
 
     except Exception as e:
         print(f"An error occurred: {e}")
