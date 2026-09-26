@@ -263,6 +263,20 @@ def post_ig_media(ig_account_id, caption, media_url, is_story=False, is_video=Fa
 
 
 
+def move_back_to_images(posted_path):
+    print(f"Moving {posted_path} back to images folder because post failed...")
+    new_path = os.path.join(IMAGES_FOLDER, os.path.basename(posted_path))
+    os.rename(posted_path, new_path)
+    try:
+        subprocess.run(["git", "config", "user.email", "actions@github.com"], check=True)
+        subprocess.run(["git", "config", "user.name", "Auto Insta Bot"], check=True)
+        subprocess.run(["git", "add", "-A"], check=True)
+        subprocess.run(["git", "commit", "-m", f"Moved back to images due to failure: {os.path.basename(posted_path)}"], check=True)
+        subprocess.run(["git", "push"], check=True)
+        print("Media moved back to images folder and pushed to GitHub.")
+    except Exception as e:
+        print(f"Git push warning during move back: {e}")
+
 def main():
     try:
         cleanup_old_posted_media()
@@ -301,7 +315,8 @@ def main():
         if success:
             print("✅ All posts done successfully! Media is already in posted_images folder.")
         else:
-            print("❌ All posts failed. Media remains in posted_images folder.")
+            print("❌ All posts failed. Moving media back to images folder so it's not lost.")
+            move_back_to_images(media_path)
 
     except Exception as e:
         print(f"An error occurred: {e}")
